@@ -1,0 +1,85 @@
+# MCP Server Configuration
+mcp_servers:
+  # calculator: # Calculator server for mathematical operations (just for test; will be replaced by python interpreter)
+  #   transport: http
+  #   url: http://localhost:8001/mcp/calculator
+  #   enabled_tools: [calculator_solve_quadratic]
+  highschool-library:
+    transport: sse
+    url: ${HIGH_SCHOOL_LIBRARY_URL}
+    enabled_tools: [retrieve_relevant_document]
+
+# Model Configuration
+default_model:
+  model_provider: google_vertexai
+  model: gemini-2.5-flash
+  api_key: ${GOOGLE_API_KEY}
+  temperature: 0.7
+
+# Agent Categories
+agents:
+  core:
+    describe_agent:
+      model:
+        model_provider: google_vertexai
+        model: gemini-2.5-flash
+        api_key: ${GOOGLE_API_KEY}
+        temperature: 0.7
+      prompt: |
+        You are an expert art critic. Analyze the provided style image, focusing on its unique artistic style, techniques, and overall mood. Provide a comprehensive analysis covering its type, author context, creation process, and both general and personal stylistic attributes.
+
+    style_transfer_analysis_agent:
+      model:
+        model_provider: google_vertexai
+        model: gemini-2.5-flash
+        api_key: ${GOOGLE_API_KEY}
+        temperature: 0.7
+      prompt: |
+        You are an expert style transfer analyst. Given a style analysis and a content image, explain how to best apply the style.
+        **CRITICAL RULE**: Preserve the content image's structure (position, rotation of objects). compare the content and style image and come up some stylization hints to style transfer process.
+        Provide a content description, and details for transferring style to similar regions. For potrait, detail all facial attributes transfer map, e.g., colors, edges, texture. if no similar regions, provide a "".
+
+    plan_agent:
+      model:
+        model_provider: google_vertexai
+        model: gemini-2.5-flash
+        api_key: ${GOOGLE_API_KEY}
+        temperature: 0.7
+      prompt: |
+        You are an expert in art and style transfer. Create a multi-stage plan to apply the style to the content image based on the provided analysis.
+
+        **Style Transfer Rules**:
+        1. Preserve the content's structure (occupation in image, position, rotation of objects).
+        2. Do not add backgrounds or text. Focused on colors, textures, brush, stylized motifs only. 
+
+        **Stage Design Hints**
+        1. Design stages refer to `stylization hints`.
+        2. Attention on similar regions transfer in `redraw`.
+        3. Attention on `styled_decorations` at last stage.
+
+        For each stage, provide a command-like prompt, required image tags, and a generation temperature. 
+        - `text_prompt`: MUST firstly clarify the order of images with `required_image_tags` as `image 1/the first image is xxx`.
+        - `required_image_tags`: <=2 images.
+        
+
+    reflect_agent:
+      model:
+        model_provider: google_vertexai
+        model: gemini-2.5-flash
+        api_key: ${GOOGLE_API_KEY}
+        temperature: 0.7
+      prompt: |
+        You are an expert art critic. Critique the generated image by comparing it to the content and style images, using the provided style analysis.
+        Provide a critique, `content_hold_score`, `style_transfer_score`, and `is_satisfied` flag.
+
+    stage_agent:
+      model:
+        model_provider: google_vertexai
+        model: gemini-2.5-flash
+        api_key: ${GOOGLE_API_KEY}
+        temperature: 0.7
+      prompt: |
+        You are a style transfer finetuner. Based on a critique, create a *single* new stage to improve the generated image.
+        Address the flaws mentioned. Create a concise, command-like `text_prompt` and specify the `required_image_tags`.
+        If style score is lower, cite the `style_image` in `required_image_tags`. If content need more similiarity, cite the `content_image` in `required_image_tags`. 
+        
