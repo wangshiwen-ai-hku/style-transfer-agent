@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph
 from .schema import State, StyleTransferPlan, ComprehensiveStyleAnalysis, StyleTransferAnalysis, Message, MODALITY, Reflection, Stage
-from src.config.manager import config
+from src.config.manager import ConfigManager
 from langchain.chat_models import init_chat_model
 from dataclasses import asdict
 from src.utils.multi_modal_utils import create_interleaved_multimodal_message, create_multimodal_message
@@ -16,9 +16,13 @@ from dotenv import load_dotenv
 from google.genai.types import HttpOptions
 from PIL import Image
 import json
+from pathlib import Path
 # from src.utils.image_processing import canny_edge_detection
 
 MAX_REFLECTIONS = 3
+config_path = Path(__file__).parent / "config.yaml"
+
+config = ConfigManager(config_path)
 
 load_dotenv()
 
@@ -29,20 +33,6 @@ logger = None
 
 graph = StateGraph(State)
 
-# Load drawing process examples from the text file
-try:
-    with open("src/agent/drawing_processes.txt", "r") as f:
-        drawing_process_examples = f.read()
-except FileNotFoundError:
-    log_warning("`src/agent/drawing_processes.txt` not found. Using empty examples.")
-    drawing_process_examples = ""
-
-try:
-    with open("src/agent/stage_examples.txt", "r") as f:
-        stage_examples = f.read()
-except FileNotFoundError:
-    log_warning("`src/agent/stage_examples.txt` not found. Using empty examples.")
-    stage_examples = ""
 
 describe_agent_config = config.get_agent_config('describe_agent', 'core')
 
@@ -53,10 +43,8 @@ describe_sys_message = SystemMessage(content=describe_llm_prompt)
 
 plan_agent_config = config.get_agent_config('plan_agent', 'core')
 plan_llm = init_chat_model(**asdict(plan_agent_config.model))
-plan_llm_prompt = plan_agent_config.prompt.format(
-    # drawing_process_examples=drawing_process_examples
-    stage_examples=stage_examples
-)
+plan_llm_prompt = plan_agent_config.prompt
+
 plan_sys_message = SystemMessage(content=plan_llm_prompt)
 
 # execute_agent_config = config.get_agent_config('execute_agent', 'core')

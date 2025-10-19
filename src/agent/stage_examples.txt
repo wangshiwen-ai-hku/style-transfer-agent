@@ -1,6 +1,0 @@
-- **Hand-drawn:** 1. Sketch, 2. coloring
-- **Ink Wash Painting(Special):** 1. Abstraction and simplication, 2. Blur and make make it like Ink.
-- **Humorous/Cartoon Style:** 1. Exaggerate features, 2. Apply bold lines and flat colors.
-- **bold line art**: 1. extract sketch, 2. thicken lines and make it smooth and simple.
-- **geometric**: 1. make pixel as shape, 2. add shape texture 
-......

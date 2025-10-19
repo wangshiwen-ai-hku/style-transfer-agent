@@ -1,12 +1,12 @@
 import asyncio
-from src.agent.graph import graph
-from src.agent.schema import State
+
 import os
 import argparse
 import shutil
 from PIL import Image
 from datetime import datetime
 from src.utils.colored_logger import init_default_logger
+import mimetypes
 
 def to_jpg(image_path):
     img = Image.open(image_path)
@@ -16,65 +16,81 @@ def to_jpg(image_path):
 
 async def main():
     parser = argparse.ArgumentParser(description="Run the style transfer agent.")
-    parser.add_argument("--style_image_path", help="Path to the style image.", default="styles/style.png")
-    parser.add_argument("--content_image_path", help="Path to the content image.", default="contents/content.png")
-    parser.add_argument("--prompt", default="Transfer the style of the content image to the style image.", help="User prompt for the agent.")
-    parser.add_argument("--result_dir", help="Path to the result directory.", default="result_exp")
+    parser.add_argument("--images", "-i", nargs='+', help="Paths to the input images. The first is treated as style, the second as content for 'agent' task.", required=True)
+    parser.add_argument("--prompt","-p", default="Transfer the style of the image 2 to image 1.", help="User prompt for the agent.")
+    parser.add_argument("--result_dir", help="Path to the result directory.", default="result_exp_general")
+    parser.add_argument("--task_type", "-t", help="Task type.", default="general")
     parser.add_argument(
-        "--directly",
+        "--directly", "-d",
         action="store_true",
         help="Perform direct style transfer, bypassing the multi-stage process."
     )
     args = parser.parse_args()
-    # style_image_paths = glob.glob("styles/*.jpg") + glob.glob("styles/*.png")
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")    
-    # style_image_path = style_image_paths[0]
-    # for style_image_path in style_image_paths:
-    if True:
-        style_image_path = args.style_image_path
+    # --- Image Handling ---
+    image_paths = []
+    for path in args.images:
+        if mimetypes.guess_type(path)[0] not in ["image/png", "image/jpg", "image/jpeg"]:
+            image_paths.append(to_jpg(path))
+        else:
+            image_paths.append(path)
 
-        # if the mimetype of image is not png/jpg
-        import mimetypes
-        if mimetypes.guess_type(style_image_path)[0] not in ["image/png", "image/jpg"]:
-            
-            style_image_path = to_jpg(style_image_path)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # --- Project Directory Setup ---
+    # Use the first image name for the main result directory
+    first_image_name = os.path.basename(image_paths[1]).split(".")[0]
+    project_dir = os.path.join(args.result_dir, first_image_name, timestamp)
+    os.makedirs(project_dir, exist_ok=True)
+    for i, img_path in enumerate(image_paths):
+        shutil.copy(img_path, os.path.join(project_dir, f"image_{i+1}{os.path.splitext(img_path)[1]}"))
         
-        if mimetypes.guess_type(args.content_image_path)[0] not in ["image/png", "image/jpg"]:
-            args.content_image_path = to_jpg(args.content_image_path)
-     
-        app = graph.compile()
-        style_image_name = os.path.basename(style_image_path).split(".")[0]
-        content_image_name = os.path.basename(args.content_image_path).split(".")[0]
-        project_dir = os.path.join(args.result_dir, style_image_name, timestamp)
-        os.makedirs(project_dir, exist_ok=True)
-        shutil.copy(style_image_path, os.path.join(project_dir, f"{style_image_name}.png"))
-        shutil.copy(args.content_image_path, os.path.join(project_dir, f"{content_image_name}.png"))
-        # Define the initial state for the graph
-        initial_state: State = {
-            "style_image_path": style_image_path,
-            "content_image_path": args.content_image_path,
+    # --- State Initialization ---
+    if args.task_type == "agent":
+        from src.agent.graph import graph
+        from src.agent.schema import State as AgentState
+        
+        if len(image_paths) < 2:
+            raise ValueError("The 'agent' task type requires at least two images (style and content).")
+
+        initial_state = {
+            "content_image_path": image_paths[0],
+            "style_image_path": image_paths[1],
             "project_dir": project_dir,
             "generated_images_map": {},
             "user_prompt": args.prompt,
-            # The following will be populated by the graph
             "image_analysis": None, 
             "style_transfer_plan": None,
             "directly": args.directly
         }
 
-        print("--- Starting Style Transfer Agent ---")
+    elif args.task_type == "general":
+        from src.general.graph import graph
+        from src.general.schema import State as GeneralState
+        
+        initial_state = {
+            "image_paths": image_paths,
+            "project_dir": project_dir,
+            "generated_images_map":{},
+            "user_prompt": args.prompt,
+            "directly": args.directly,
+        }
+    else:
+        raise ValueError(f"Invalid task type: {args.task_type}")
 
-        # Initialize logging
-        init_default_logger(__name__)
+    app = graph.compile()
+    
+    print("--- Starting Image Processing Agent ---")
 
-        # Run the graph
-        final_state = await app.ainvoke(initial_state)
+    # Initialize logging
+    init_default_logger(__name__)
 
-        print("\n--- Style Transfer Agent Finished ---")
-        print("Final generated images map:")
-        for tag, path in final_state['generated_images_map'].items():
-            print(f"  - {tag}: {path}")
+    # Run the graph
+    final_state = await app.ainvoke(initial_state)
+
+    print("\n--- Image Processing Agent Finished ---")
+    print("Final generated images map:")
+    for tag, path in final_state['generated_images_map'].items():
+        print(f"  - {tag}: {path}")
 
 if __name__ == "__main__":
     # To avoid potential issues with asyncio in different environments,
