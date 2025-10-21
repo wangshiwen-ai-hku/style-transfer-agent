@@ -11,14 +11,20 @@ class TaskIdentifier(BaseModel):
 
 
 class SkillSelector(BaseModel):
-    """Selects the most appropriate skill file to use for the task."""
-    skill_file_to_read: str = Field(..., description="The full path of the skill file that should be read to complete the task, e.g., 'src/general/rules/style_transfer.md'.")
+    """Selects the most appropriate skill file to use for the task.
+    if no suitable skill file is found, set skill_file_to_read to an empty string. and fill the task_name, task_description, task_rules with the user's request.
+    if user has specific requirements, fill the user_specific_rules with the user's requirements.
+    """
+    skill_file_to_read: str = Field(..., description="The full path of the skill file that should be read to complete the task, e.g., 'src/general/rules/style_transfer.md'. IF no suitable skill file is found, return an empty string.")
+    task_name: str = Field(..., description="Generate name of the task,")
+    task_description: str = Field(..., description="Generate description of the task, IF no skill_file_to_read, e.g., 'Style transfer the content image to the style image.")
+    task_rules: str = Field(..., description="The rules for the task, IF no skill_file_to_read,e.g., Follow the user's instructions, be logical, concise in bullets.")
+    user_specific_rules: str = Field(..., description="The user's specific rules for the task, According to the user's request, generate the rules for the task.")
 
 
 class MODALITY(str, Enum):
     TEXT = "text"
     IMAGE = "image"
-
 
 class Message(BaseModel):
     """
@@ -188,6 +194,8 @@ class State(TypedDict):
     directly: Optional[bool]
     reflection_count: int
     reflections: List[Reflection]
+
+    gen_image_model: str = 'gemini'
 
 
 

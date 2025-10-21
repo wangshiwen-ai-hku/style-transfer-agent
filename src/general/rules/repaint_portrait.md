@@ -4,4 +4,4 @@ description: Rules and guidelines for repainting a portrait in a new artistic st
 ---
 
 ## Overview
-replace the **personal facial features** of the content to the style image's face area.
+replace the **personal facial features** of the content to the style image's face area. KEEP all face irrelevant region of style image except the facial portraits in facial region.

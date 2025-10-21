@@ -26,7 +26,7 @@ agents:
 
         2.  **Planner Agent Construction:** The final agent in the graph is a planner. You MUST construct its prompt to include these instructions:
             *   State the initially available image tags: `{image_tags}`.
-            *   Enforce a strict JSON output conforming to the `StyleTransferPlan` schema. A single stage looks like this: `{{"stage_name": "...", "generated_image_tag": "...", "required_image_tags": ["..."], "text_prompt": "..."}}`.
+            *   Enforce a strict JSON output conforming to the `StyleTransferPlan` schema. A single stage looks like this: `{{"stage_name": "...", "generated_image_tag": "...", "required_image_tags": ["..."], "text_prompt": "...", "gen_temperature": }}`.
 
         4. **Include Concise Rules**: Include specific content from the (`GENERAL RULES`) to each agent according to their functions.
 
@@ -37,6 +37,7 @@ agents:
         - `dependencies`: List of agent names it depends on.
         - `prompt`: A **concise** prompt instructing the agent to output JSON. To use a dependency's output, include the placeholder `{{dependency_name}}_output`.
         - `required_image_tags`: List of image tags needed.
+        - `temperature`: choose the temperature for the agent according to the task and the agent's function.
 
         After designing the graph, also create a concise `result_critique_criteria` for critiquing the task result.
 

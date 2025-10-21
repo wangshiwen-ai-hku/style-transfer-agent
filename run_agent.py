@@ -8,6 +8,8 @@ from datetime import datetime
 from src.utils.colored_logger import init_default_logger
 import mimetypes
 
+from dotenv import load_dotenv
+load_dotenv()
 def to_jpg(image_path):
     img = Image.open(image_path)
     image_path = os.path.splitext(image_path)[0] + ".jpg"
@@ -20,6 +22,7 @@ async def main():
     parser.add_argument("--prompt","-p", default="Transfer the style of the image 2 to image 1.", help="User prompt for the agent.")
     parser.add_argument("--result_dir", help="Path to the result directory.", default="result_exp_general")
     parser.add_argument("--task_type", "-t", help="Task type.", default="general")
+    parser.add_argument("--gen_image_model", "-g", help="Image generation model.", default="gemini")
     parser.add_argument(
         "--directly", "-d",
         action="store_true",
@@ -38,8 +41,8 @@ async def main():
     
     # --- Project Directory Setup ---
     # Use the first image name for the main result directory
-    first_image_name = os.path.basename(image_paths[1]).split(".")[0]
-    project_dir = os.path.join(args.result_dir, first_image_name, timestamp)
+    first_image_name = os.path.basename(image_paths[0]).split(".")[0]
+    project_dir = os.path.join(args.result_dir, first_image_name, args.gen_image_model + "_" + timestamp)
     os.makedirs(project_dir, exist_ok=True)
     for i, img_path in enumerate(image_paths):
         shutil.copy(img_path, os.path.join(project_dir, f"image_{i+1}{os.path.splitext(img_path)[1]}"))
@@ -53,15 +56,15 @@ async def main():
             raise ValueError("The 'agent' task type requires at least two images (style and content).")
 
         initial_state = {
-            "content_image_path": image_paths[0],
-            "style_image_path": image_paths[1],
+            "content_image_path": image_paths[1],
+            "style_image_path": image_paths[0],
             "project_dir": project_dir,
             "generated_images_map": {},
             "user_prompt": args.prompt,
             "image_analysis": None, 
             "style_transfer_plan": None,
-            "directly": args.directly
-        }
+            "directly": args.directly,
+            "gen_image_model": args.gen_image_model}
 
     elif args.task_type == "general":
         from src.general.graph import graph
@@ -73,6 +76,7 @@ async def main():
             "generated_images_map":{},
             "user_prompt": args.prompt,
             "directly": args.directly,
+            "gen_image_model": args.gen_image_model
         }
     else:
         raise ValueError(f"Invalid task type: {args.task_type}")

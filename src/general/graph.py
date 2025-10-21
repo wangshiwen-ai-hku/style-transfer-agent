@@ -22,6 +22,7 @@ from collections import deque
 from src.utils.colored_logger import log_agent, log_tool, log_error, log_warning, log_success
 from src.utils.json_utils import extract_json_from_text
 from src.utils.image_processing import canny_edge_detection
+from src.utils.image_generation import image_generation_tool
 
 MAX_REFLECTIONS = 5
 config_path = Path(__file__).parent / "config.yaml"
@@ -157,8 +158,8 @@ async def orchestrator_node(state: State) -> State:
     log_debug("Orchestrator ReAct: Preparing skill selection prompt with user input and available skills")
     log_debug(f"Orchestrator ReAct: user_prompt={{user_prompt}}")
     skill_selection_prompt = f"""
-    You are an AI architect responsible for designing an image processing workflow.
-    Based on the user's request, you must choose the most relevant "skill" to guide your design.
+    You are an AI architect responsible for designing skills and rules in an image processing workflow.
+    Based on the user's request, choose the most relevant "skill" to guide your design (Be accurate, If NOT so relevant, you must generate new skill content, i.e. task_name, task_description, task_rules.)
 
     **User's Request:**
     {user_prompt}
@@ -167,7 +168,6 @@ async def orchestrator_node(state: State) -> State:
     {skill_files_full_path}
 
     Analyze the user's request and determine which single skill file is the most appropriate to read.
-    Your response must be a JSON object specifying the file path.
     """
     structured_skill_selector_llm = orchestrator_llm.with_structured_output(SkillSelector)
     
@@ -175,6 +175,17 @@ async def orchestrator_node(state: State) -> State:
         log_tool("Orchestrator", "Calling skill-selection LLM (tool call)")
         selection_result = await structured_skill_selector_llm.ainvoke(skill_selection_prompt)
         skill_to_read = selection_result.skill_file_to_read
+        user_specific_rules = selection_result.user_specific_rules
+        log_debug(f"Orchestrator ReAct: user_specific_rules={user_specific_rules}")
+        if not skill_to_read:
+            log_warning("No suitable skill file found. Generating a new skill file based on the user's request.")
+            task_name = selection_result.task_name
+            rules_content = selection_result.rules + "\n\n" + user_specific_rules
+            generated_skill_path = state.get('project_dir') / "rules" / f"{task_name}.md"
+            with open(generated_skill_path, 'w', encoding='utf-8') as gf:
+                gf.write(rules_content)
+            log_success(f"Auto-generated missing skill file and saved to {generated_skill_path}")
+            skill_to_read = generated_skill_path
         log_success(f"Decided to use skill: {skill_to_read}")
         # Detailed ReAct trace
         log_debug("Orchestrator ReAct: Received structured skill selection result")
@@ -203,10 +214,12 @@ async def orchestrator_node(state: State) -> State:
                         rules_content = file_content # Fallback if format is weird
                 else:
                     rules_content = file_content
+            rules_content = rules_content + "\n\n" + user_specific_rules
             log_success(f"Successfully loaded and parsed rules from {skill_to_read}")
             log_debug(f"Orchestrator ReAct: rules_content_length={len(rules_content)}")
         else:
             log_warning(f"Selected skill file '{skill_to_read}' does not exist.")
+        
     except Exception as e:
         log_error(f"Error reading or parsing skill file '{skill_to_read}': {e}")
 
@@ -493,41 +506,27 @@ async def execute_stage_node(state: State) -> State:
             temperature = stage.gen_temperature if stage.gen_temperature is not None else 0.7 # TODO: get from config
             log_debug(f"Using temperature for generation: {temperature}")
 
-            response = genai_client.models.generate_content(
-                model=MODEL_ID,
-                contents=contents,
-                config=GenerateContentConfig(
-                    response_modalities=["IMAGE"],
-                    image_config=ImageConfig(
-                        aspect_ratio=aspect_ratio_to_use,
-                    ),
-                    candidate_count=1,
-                    temperature=temperature,
-                ),
-            )
+            # Use the generic image_generation_tool (it will call the appropriate backend)
+            model_to_use = state.get('gen_image_model', MODEL_ID) if isinstance(state, dict) else MODEL_ID
+            log_debug(f"Using image generation model: {model_to_use}")
 
-            if response.candidates[0].finish_reason != FinishReason.STOP:
-                reason = response.candidates[0].finish_reason
-                log_error(f"Image generation failed for stage '{stage.stage_name}'. Reason: {reason}")
+            # collect image input paths required by this stage
+            image_input_paths = [generated_images_map[tag] for tag in image_tags if tag in generated_images_map]
+            # consolidate text prompts
+            text_prompt_combined = "\n\n".join(texts) if isinstance(texts, (list, tuple)) else str(texts)
+
+            try:
+                new_image_pil = image_generation_tool(text_prompt_combined, image_input_paths, model=model_to_use)
+                new_image_path = state['project_dir'] + "/" + stage.generated_image_tag + ".png"
+                new_image_pil.save(new_image_path)
+                if new_image_path:
+                    log_success(f"Generated image saved to: {new_image_path}")
+                    generated_images_map[stage.generated_image_tag] = new_image_path
+                else:
+                    log_warning(f"Image generation tool did not return a path for stage '{stage.stage_name}'.")
+            except Exception as e:
+                log_error(f"Image generation failed for stage '{stage.stage_name}': {e}")
                 continue
-
-            generated_image_data = None
-            for part in response.candidates[0].content.parts:
-                if part.inline_data:
-                    generated_image_data = part.inline_data.data
-                    break
-            
-            if generated_image_data:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                new_image_path = os.path.join(output_dir, f"{stage.generated_image_tag}_{timestamp}.png")
-                
-                with open(new_image_path, "wb") as f:
-                    f.write(generated_image_data)
-
-                log_success(f"Generated image saved to: {new_image_path}")
-                generated_images_map[stage.generated_image_tag] = new_image_path
-            else:
-                log_warning(f"No image data found in response for stage '{stage.stage_name}'.")
 
         except Exception as e:
             log_error(f"An error occurred during image generation for stage '{stage.stage_name}': {e}")
@@ -751,35 +750,21 @@ async def direct_stylize_node(state: State) -> State:
     log_success(f"Direct generate prompt saved to {direct_prompt_path}")
 
     log_tool("ImageGen", "Generating image 'direct_generated_image'...")
+    model_to_use = state.get('gen_image_model', MODEL_ID) if isinstance(state, dict) else MODEL_ID
+    log_debug(f"Using image generation model for direct stylize: {model_to_use}")
+
+    image_input_paths = state.get('provided_images', [])
     try:
-        response = genai_client.models.generate_content(
-            model=MODEL_ID,
-            contents=contents,
-            config=GenerateContentConfig(
-                response_modalities=["IMAGE"],
-                image_config=ImageConfig(aspect_ratio=aspect_ratio_to_use),
-                candidate_count=1,
-                temperature=0.7 # Default temperature for direct generation
-            ),
-        )
-
-        if response.candidates and response.candidates[0].finish_reason == FinishReason.STOP:
-            generated_image_data = response.candidates[0].content.parts[0].inline_data.data
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            new_image_path = os.path.join(output_dir, f"direct_generated_image_{timestamp}.png")
-            
-            with open(new_image_path, "wb") as f:
-                f.write(generated_image_data)
-
+        new_image = image_generation_tool(state['user_prompt'], image_input_paths, model=model_to_use)
+        new_image_path = os.path.join(output_dir, f"direct_generated_image.png")
+        new_image.save(new_image_path)
+        if new_image_path:
             log_success(f"Generated image saved to: {new_image_path}")
             generated_images_map["direct_generated_image"] = new_image_path
         else:
-            reason = response.candidates[0].finish_reason if response.candidates else "Unknown"
-            log_error(f"Image generation failed. Reason: {reason}")
-
+            log_error("Image generation tool did not return a path for direct generation")
     except Exception as e:
-        log_error(f"An error occurred during image generation: {e}")
-    
+        log_error(f"An error occurred during direct image generation: {e}")
     state['generated_images_map'] = generated_images_map
     return state
 
@@ -795,7 +780,7 @@ async def aggregate_images_node(state: State) -> State:
         log_debug(f"  - {tag}: {path}")
 
     # Potentially select the final image and put its path in a dedicated state field
-    if state['style_transfer_plan'] and state['style_transfer_plan'].stages:
+    if state.get('style_transfer_plan', []) and state['style_transfer_plan'].stages:
         last_stage_tag = state['style_transfer_plan'].stages[-1].generated_image_tag
         if last_stage_tag in state['generated_images_map']:
             log_success(f"Final image is: {state['generated_images_map'][last_stage_tag]}")
