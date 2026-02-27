@@ -1,6 +1,6 @@
-# Art Agent
+# StyleTransfer Agent
 
-Welcome to the official repository of Art Agent.
+Welcome to the official repository of StyleTransfer Agent.
 
 ![Tessar](./tessar.jpg)
 
