@@ -1,0 +1,132 @@
+# ---------------------------------------------------------------------------
+# Credentials. The endpoint key lives in .env and must never be committed; the
+# repository is intended to be released anonymously alongside the paper.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.key
+*_key.txt
+
+# ---------------------------------------------------------------------------
+# Generated outputs. These are large and reproducible from the scripts; the
+# paper's numbers are reproduced by running the pipeline, not by shipping its
+# results. The two exceptions below are kept deliberately.
+# ---------------------------------------------------------------------------
+outputs*/
+result_*/
+plan_transfer/
+ablation_*/
+traces/
+n60/
+*.log
+
+# Keep the evaluation manifests and the measured numbers the paper cites, since
+# a reader checking a table should not have to re-run 1500 API calls to see the
+# raw judgements behind it.
+!outputs_n60/style_ab.csv
+!outputs_n60/style_ab_summary.csv
+!outputs_n60/framing_audit.csv
+!outputs_n60/idsim_validation.csv
+!**/preservation_metrics.csv
+!**/index.csv
+
+# ---------------------------------------------------------------------------
+# Model weights and caches. face_landmarker.task is the exception: it is 3.8 MB
+# and the evaluation machine has no CDN access, so shipping it is what makes the
+# preservation metrics runnable offline.
+# ---------------------------------------------------------------------------
+*.safetensors
+*.ckpt
+*.pth
+*.onnx
+*.bin
+!assets/models/face_landmarker.task
+.cache/
+~/.insightface/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------------------
+# Editor / OS
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# ---------------------------------------------------------------------------
+# Scratch. third_party/*/output holds per-run intermediates from the baselines.
+# ---------------------------------------------------------------------------
+third_party/*/output/
+third_party/*/_sample_*.txt
+*.orig
+*.pre_lazy
+.idsim_tmp.png
+
+# ---------------------------------------------------------------------------
+# Vendored third-party systems (143 MB, and GenArtist carries its own .git).
+# These are other people's repositories; we ship the patches we had to make to
+# run them, not copies of them. scripts/setup_third_party.sh clones the upstream
+# commits and applies patches/, so a reader reproduces the baseline rather than
+# trusting our snapshot of it.
+# ---------------------------------------------------------------------------
+third_party/
+!third_party/README.md
+!patches/
+
+# ---------------------------------------------------------------------------
+# The full image corpus (368 MB). The evaluation set actually used by the paper
+# lives in compare/ and is committed: ten content images, six styles, and the
+# manifests that pair them. data/ is the pool those were drawn from and is not
+# needed to reproduce any reported number.
+# ---------------------------------------------------------------------------
+data/
+*.zip
+
+# ---------------------------------------------------------------------------
+# Evaluation imagery is NOT redistributed.
+#
+# The content images are photographs of real people and were not collected for
+# public release; the style references are third-party artworks whose licences we
+# have not cleared for redistribution. Shipping them would put a rights question
+# on every reader who clones this repository, and it is not ours to answer on
+# their behalf.
+#
+# What ships instead is the manifest: compare/pairs*.txt names every pair, its
+# stylistic dimension, and the exact file each side expects. Point those paths at
+# your own images, or at the corresponding public datasets, and every script in
+# scripts/ runs unchanged. README.md explains the arrangement.
+# ---------------------------------------------------------------------------
+compare/content*/
+compare/style*/
+compare/paper_results*/
+compare/**/*.jpg
+compare/**/*.jpeg
+compare/**/*.png
+!compare/paper_results/pairs.txt
+assets/*.jpg
+assets/*.png
+!assets/models/
+
+# Stray working directories and pulled analysis files that are not part of the
+# release. traces*/ is per-run instrumentation; the CSVs the paper cites live
+# under outputs_n60/ and are whitelisted above.
+traces*/
+/outputs_n60_framing_audit.csv

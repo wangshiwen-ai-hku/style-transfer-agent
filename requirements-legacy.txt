@@ -1,0 +1,12 @@
+# Retired vendor SDK paths. NOT needed to run AgenticST after the APIYI refactor.
+#
+# Only three modules still import these, and none of them is reachable from
+# run_agent.py / run_agent_limited.py with task_type general or general_limited:
+#   src/agent/graph.py               (--task_type agent, the pre-DyMAG prototype)
+#   src/general_limited/graph_lim.py (superseded by graph.py)
+#   src/utils/input_processor.py     (not imported anywhere)
+#
+# Install only if you deliberately want to run those legacy paths.
+google-genai>=1.0
+dashscope>=1.20
+volcengine-python-sdk>=1.0

@@ -1,0 +1,198 @@
+--- third_party/idea2img/idea2img_pipeline.py.orig	2026-08-08 11:03:30
++++ third_party/idea2img/idea2img_pipeline.py	2026-08-18 22:38:39
+@@ -3,16 +3,45 @@
+ import time
+ import argparse
+ import csv, json
+-import cv2, base64
++import base64
++try:
++    import cv2  # only needed by unused helpers; absent in the API-only env
++except Exception:
++    cv2 = None
+ from tqdm import tqdm
+ import requests
+ import random
+-import torch
++# import torch  -- moved into t2i_sd15/t2i_sdxl; the apiyi backend needs no torch
+ from datetime import datetime
+ from PIL import Image
+ 
++def _normalize_transcript(transcript):
++    """Convert Idea2Img's message format to the OpenAI-compatible one.
++
++    Upstream builds `content` as a list of bare Python strings interleaved with
++    image dicts, which was valid for the Azure GPT-4V deployment it targeted. The
++    OpenAI-compatible endpoint rejects it outright -- HTTP 400, "contents is
++    required" -- and gptv_query's retry loop then spins without ever surfacing the
++    cause. Strings become {"type": "text", ...}; image entries already have the
++    right shape and pass through untouched.
++    """
++    out = []
++    for msg in transcript or []:
++        c = msg.get("content")
++        if isinstance(c, list):
++            parts = []
++            for item in c:
++                if isinstance(item, str):
++                    parts.append({"type": "text", "text": item})
++                elif isinstance(item, dict):
++                    parts.append(item)
++            c = parts
++        out.append({"role": msg.get("role", "user"), "content": c})
++    return out
++
++
+ def gptv_query(transcript=None, temp=0.):
+-    max_tokens = 512
++    max_tokens = 2048
+     wait_time = 10
+ 
+     headers = {
+@@ -20,27 +49,30 @@
+         "Authorization": f"Bearer {api_key}"
+     }
+     data = {
+-        'model': 'gpt-4-vision-preview',
++        'model': LM_MODEL,
+         'max_tokens':max_tokens, 
+         'temperature': temp,
+         'top_p': 0.5,
+         'messages':[]
+     }
+     if transcript is not None:
+-        data['messages'] = transcript
++        data['messages'] = _normalize_transcript(transcript)
+ 
+-    response_text, retry, response_json = '', 0, None
++    response_text, retry, response_json, last = '', 0, None, ''
+     while len(response_text)<2:
+         retry += 1
++        if retry > 8:
++            raise RuntimeError('gptv_query gave up after %d attempts: %s' % (retry-1, last[:400]))
+         try:
+-            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, data=json.dumps(data)) 
++            response = requests.post(APIYI_BASE_URL.rstrip("/") + "/chat/completions", headers=headers, data=json.dumps(data)) 
+             response_json = response.json()
+         except Exception as e:
+             if random.random()<1: print(e)
+             time.sleep(wait_time)
+             continue
+         if response.status_code != 200:
+-            print(response.headers,response.content)
++            last = str(response.content)[:400]
++            print(response.status_code, last)
+             if random.random()<0.01: print(f"The response status code for is {response.status_code} (Not OK)")
+             time.sleep(wait_time)
+             data['temperature'] = min(data['temperature'] + 0.2, 1.0)
+@@ -156,6 +188,13 @@
+         print('gptv_init_prompt    IDEA: %s.\n %s\n'%(user_prompt,response))
+     prompts = response.split('<START>')[1:]
+     prompts = [x.strip().split('<END>')[0] for x in prompts]
++    prompts = [x for x in prompts if x.strip()]
++    if not prompts:
++        prompts = [response.strip()[:400] or user_prompt]
++        print('[warn] no <START> block in response; falling back to raw text')
++    while len(prompts) < args.num_prompt:
++        print('[warn] got %d prompt(s), expected %d; padding' % (len(prompts), args.num_prompt))
++        prompts.append(prompts[-1])
+     return prompts
+ 
+ def gptv_reflection_prompt_selectbest(user_prompt, img_prompt, idea_transcript, listofimages, args):
+@@ -258,6 +297,7 @@
+ 
+ class t2i_sd15():
+     def __init__(self):
++        import torch
+         from diffusers import StableDiffusionPipeline
+         model_id = "runwayml/stable-diffusion-v1-5"
+         self.pipe = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+@@ -269,6 +309,7 @@
+ 
+ class t2i_sdxl():
+     def __init__(self, refiner=False, img2img=True):
++        import torch
+         from diffusers import DiffusionPipeline
+         self.refiner = refiner
+         self.img2img = img2img
+@@ -302,10 +343,52 @@
+             image = self.refine_pipe(prompt=prompt, image=image[None, :]).images[0]
+         image.save(savename)
+ 
++# --- APIYI integration (added for the TVCG revision) -------------------------
++# Idea2Img is used as a backbone-controlled baseline: the orchestration is theirs,
++# the generator is ours. --t2i apiyi swaps SDXL for the same image model AgenticST
++# uses (and needs no GPU); --t2i sdxl reproduces the paper's original setting.
++import os as _os
++_PROJ = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".."))
++try:
++    from dotenv import load_dotenv as _ld
++    _ld(_os.path.join(_PROJ, ".env"))
++except Exception:
++    pass
++APIYI_BASE_URL = _os.environ.get("BASE_URL", "https://api.apiyi.com/v1")
++LM_MODEL = _os.environ.get("IDEA2IMG_LM_MODEL", "gemini-2.5-flash")
++GEN_MODEL = _os.environ.get("IDEA2IMG_GEN_MODEL", "gemini-2.5-flash-image")
++
++
++class t2i_apiyi():
++    """Drop-in replacement for t2i_sdxl backed by APIYI, no GPU required."""
++    def __init__(self, *a, **kw):
++        import sys as _sys
++        if _PROJ not in _sys.path:
++            _sys.path.insert(0, _PROJ)
++        from src.utils import apiyi as _apiyi
++        self._apiyi = _apiyi
++
++    def inference(self, prompt, savename):
++        img = self._apiyi.generate_image(prompt, model=GEN_MODEL)
++        img.convert("RGB").save(savename)
++
++    def img2img_inference(self, image, prompt, savename, strength=1.0):
++        import tempfile
++        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
++            tmp = f.name
++        image.convert("RGB").save(tmp)
++        img = self._apiyi.generate_image(
++            prompt, image_paths=[tmp],
++            image_clare_prompt=["Image 1 is the current image to revise."],
++            model=GEN_MODEL)
++        img.convert("RGB").save(savename)
++        _os.unlink(tmp)
++# -----------------------------------------------------------------------------
++
+ def main():
+     parser = argparse.ArgumentParser()
+ 
+-    parser.add_argument("--api_key", type=str, help="OpenAI GPT-4V API key; https://platform.openai.com/docs/guides/vision")
++    parser.add_argument("--api_key", type=str, default=None, help="APIYI key; defaults to APIYI_KEY in code/.env")
+     # parser.add_argument("--huggingface_key", type=str, help="huggingface SDXL key")
+     parser.add_argument("--testfile", type=str, default="testsample.txt")
+     parser.add_argument("--num_img", type=int, default=1, help="number of images to generate per prompt")
+@@ -313,6 +396,8 @@
+     parser.add_argument("--max_rounds", type=int, default=3, help="max number of iter rounds")
+     parser.add_argument("--verbose", default=False, action="store_true")
+     parser.add_argument("--foldername", type=str, default="sdxl_iter")
++    parser.add_argument("--t2i", type=str, default="apiyi", choices=["apiyi", "sdxl"],
++                        help="apiyi = same generator as AgenticST (backbone-controlled); sdxl = original setting")
+     parser.add_argument("--strength", type=float, default=1.00, help="strength of img2img pipeline")
+     parser.add_argument("--fewshot", default=False, action="store_true")
+     parser.add_argument("--select_fewshot", default=False, action="store_true")
+@@ -325,7 +410,7 @@
+     # login(token = access_token_write)
+ 
+     global api_key
+-    api_key = args.api_key
++    api_key = args.api_key or _os.environ.get('APIYI_KEY')
+ 
+     os.system('mkdir -p output/%s'%args.foldername)
+     os.system('mkdir -p output/%s/iter'%args.foldername)
+@@ -335,7 +420,7 @@
+ 
+     sample_list = [x.strip() for x in list(open(args.testfile,'r'))]
+     # t2i_model = t2i_sd15()
+-    t2i_model = t2i_sdxl(refiner=True, img2img=True)
++    t2i_model = t2i_apiyi() if args.t2i == 'apiyi' else t2i_sdxl(refiner=True, img2img=True)
+ 
+     for sample_ii in tqdm(range(len(sample_list))):
+         user_prompt, img_prompt = sample_list[sample_ii], None

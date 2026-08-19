@@ -1,0 +1,38 @@
+llm_provider: gemini
+user_vertexai: false
+images: 
+  # - data/content/23.jpg
+  # - data/compare/style/114.jpg
+  # - data/last_compare/content/5.jpg
+  # - data/last_compare/style/5.jpg
+  # - evaluation_dataset/content/22.jpg
+  # - data/content/27.jpg
+  # - data/samples/content/52.png
+  # - evaluation_dataset/style/204.jpg
+  # - data/samples/style/18.jpg
+  - data/content/42.jpg
+  - data/style/153.jpg
+  # - data/samples/content/1.jpg
+  # - data/samples/style/204.jpg
+
+image_tags:
+  - content_image
+  - style_image
+  
+prompt: "Image 1 is the content image, Image 2 is the style image. Transfer the style of the style image to the content image."
+
+limited_plan_num: 3
+limited_response_length: 100
+limited_prompt_length: 100
+limited_reflection_count: 3
+limited_analysis_agents: 2
+
+result_dir: result_typical_case
+task_type: general_limited
+gen_image_model: gemini
+need_grayscale: false
+need_edges: false
+target_image: null
+resize: 1024
+directly: false
+skip_skill: false

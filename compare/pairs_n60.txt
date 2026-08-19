@@ -1,0 +1,80 @@
+# Expanded evaluation set: 10 content x 6 styles = 60 pairs.
+#
+# Content images are the ten in data/content on which the face landmarker detects a
+# face; the preservation metrics (LMD, EAR, gaze, ID-Sim) are undefined without one,
+# and 22/23 -- the two cases raised in review -- are among them. The other 27 readable
+# content images have no detectable face and are excluded for that reason.
+#
+# The four original styles are kept, so this set subsumes the earlier one and every
+# stylistic dimension goes from one or two image pairs to ten -- the sample size the
+# earlier tables could not support. Styles 301 and 302 are added to widen coverage.
+#
+# 301 and 302 are numbered outside the data/style range on purpose: data/style already
+# contains different images at 42 and 58, and reusing those ids would have made the
+# pair_id ambiguous for any script that resolves a style by stem.
+#
+# WARNING on style 302: the transformation it asks for removes interior facial detail
+# by construction. Landmark, gaze and identity metrics on those ten pairs measure the
+# style working as intended, not a defect, and must never be pooled with the rest.
+#
+# pair_id,content,style,style_attr,note
+sty_9_cnt_7,compare/content/7.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_8,compare/content/8.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_13,compare/content/13.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_14,compare/content/14.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_15,compare/content/15.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_21,compare/content/21.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_22,compare/content/22.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_23,compare/content/23.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_27,compare/content/27.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_9_cnt_31,compare/content/31.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry
+sty_14_cnt_7,compare/content/7.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_8,compare/content/8.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_13,compare/content/13.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_14,compare/content/14.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_15,compare/content/15.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_21,compare/content/21.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_22,compare/content/22.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_23,compare/content/23.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_27,compare/content/27.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_14_cnt_31,compare/content/31.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_112_cnt_7,compare/content/7.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_8,compare/content/8.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_13,compare/content/13.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_14,compare/content/14.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_15,compare/content/15.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_21,compare/content/21.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_22,compare/content/22.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_23,compare/content/23.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_27,compare/content/27.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_112_cnt_31,compare/content/31.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_114_cnt_7,compare/content/7.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_8,compare/content/8.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_13,compare/content/13.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_14,compare/content/14.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_15,compare/content/15.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_21,compare/content/21.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_22,compare/content/22.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_23,compare/content/23.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_27,compare/content/27.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_114_cnt_31,compare/content/31.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_301_cnt_7,compare/content/7.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_8,compare/content/8.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_13,compare/content/13.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_14,compare/content/14.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_15,compare/content/15.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_21,compare/content/21.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_22,compare/content/22.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_23,compare/content/23.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_27,compare/content/27.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_301_cnt_31,compare/content/31.jpg,compare/style/301.png,layered_lineart_over_photo,white line-drawn subject composited over a photographic ground
+sty_302_cnt_7,compare/content/7.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_8,compare/content/8.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_13,compare/content/13.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_14,compare/content/14.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_15,compare/content/15.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_21,compare/content/21.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_22,compare/content/22.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_23,compare/content/23.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_27,compare/content/27.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction
+sty_302_cnt_31,compare/content/31.jpg,compare/style/302.png,flat_colorblock_silhouette,two-tone flat silhouette; interior detail removed by construction

@@ -1,0 +1,12 @@
+# Preservation-aware metrics only (Sec. 4.3): EAR, landmark drift, gaze, ID-Sim, E-IoU.
+#
+# Deliberately separate from requirements-metrics.txt: none of these need torch, so
+# this installs in a couple of minutes and cannot pull a CPU-only torch wheel into
+# the environment by accident. Install requirements-metrics.txt as well only when
+# you need FID / LPIPS / CSD, which do require a CUDA-matched torch.
+mediapipe>=0.10          # face landmarks -> EAR, landmark drift, gaze
+insightface>=0.7.3       # ArcFace embedding -> ID-Sim (secondary diagnostic only)
+onnxruntime>=1.18        # insightface backend; CPU is fast enough at this scale
+scikit-image>=0.24       # edge maps -> E-IoU
+scipy>=1.14
+pandas>=2.2

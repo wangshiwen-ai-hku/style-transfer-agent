@@ -1,0 +1,139 @@
+# Model Configuration
+default_model:
+  model_provider: openai
+  model: ${MODEL}
+  api_key: ${APIYI_KEY}
+  base_url: ${BASE_URL}
+  temperature: 0.7
+
+# Agent Categories
+agents:
+
+  core:
+    skill_agent:
+      model:
+        model_provider: ${MODEL_PROVIDER}
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        temperature: 1.0
+
+    planner:
+      model:
+        model_provider: openai
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        # model_provider: ${MODEL_PROVIDER}
+        # model: ${MODEL}
+        # api_key: ${APIYI_KEY}
+        # base_url: ${BASE_URL}
+        temperature: 0.7
+
+    orchestrator_agent:
+      model:
+        model_provider: openai
+        # model: ${GOOGLE_MODEL}
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        # model_provider: ${MODEL_PROVIDER}
+        # model: ${MODEL}
+        # api_key: ${APIYI_KEY}
+        # base_url: ${BASE_URL}
+        temperature: 1.0
+      prompt: |
+        You are a orchestrator for image analysis and planning tailored for the input images and tasks. Your goal is to design a multi-agent DAG workflow to make comprehensive analysis given a task and images. You must tailor your prompt for each agent in you DAG according to the understanding of given images. You must ensure their output to be desired JSON output. (Critical) You MUST include a `planner` agent at the end to make multi-stage plan for an image task, use `planner` as the last planner agent's name. 
+
+        **GENERAL RULES**
+        {rules_to_be_loaded}
+
+        ** (IMPORTANT) RESOURCE CONSTRAINTS**
+        - Max Stages: {limited_plan_num}
+        - Max Response Length (words): {limited_response_length}
+        - Max Prompt Length (words): {limited_prompt_length}
+        - Max Analysis Agents: <= {limited_analysis_agents} (including the planner)
+
+        **DESIGN PRINCIPLES**
+        1.  **Important system prompt for each agent**: 
+            *   Tailor prompt for each agent according to the understanding of given images and task.
+            *   (CRITICAL) Include specific content from the (`GENERAL RULES`) to each agent according to their functions.
+            *   (CRITICAL) Instruct each agent to keep their analysis concise, under approx {limited_response_length} words.
+            *   (CRITICAL) Ensure the system prompt for each agent is concise, under approx {limited_prompt_length} words.
+            *   Ensure JSON output for each agent.
+        2.  **Data Flow:** Link agents by using `{{dependency_name_output}}` placeholders in prompts to pass data.
+
+        3.  **Preservation Contract:** If the `GENERAL RULES` require a `preservation_contract`, then exactly ONE content-analysis agent in your graph MUST produce it, and you MUST:
+            *   name that field `preservation_contract` in that agent's required JSON output;
+            *   exempt that field from the response length cap above, but keep each entry terse;
+            *   make the planner depend on that agent, and instruct the planner to copy each region's `keep` attributes into the stage prompts as explicit constraints;
+            *   include the contract's `keep` attributes in `result_critique_criteria`, so that reflection checks the result against what the system itself committed to. An attribute listed under `keep` that changed in the output is a FAILURE regardless of aesthetic quality; an attribute listed under `change` that changed is NOT a failure.
+            *   use EXACTLY the field names `region`, `keep`, `change`, `why`. Do not invent an alternative structure such as nesting by subject or replacing them with a `criticality` rating: downstream tooling reads these names.
+
+        3b. **(CRITICAL) THE USER'S REQUEST OVERRIDES THE DEFAULT CONTRACT.**
+            Read `User's request` below before writing any agent prompt. If it asks for an
+            attribute to be transferred or changed -- facial details, expression, gaze,
+            proportion, composition, or anything else -- then for the relevant region that
+            attribute MUST be placed under `change` and MUST NOT appear under `keep`, and
+            `result_critique_criteria` MUST NOT ask for it to be preserved.
+            You MUST copy the user's wording verbatim into the prompt of the agent that
+            produces the contract, prefixed with `USER REQUIREMENT (overrides defaults):`,
+            so the instruction survives into that agent's context rather than stopping here.
+            A contract that contradicts an explicit user request is a defect: it makes the
+            system silently ignore the user, which is worse than having no contract.
+
+        4.  **Planner Agent Construction:** The final agent in the graph is a planner. You MUST construct its prompt to include these instructions:
+            *   State the initially available image tags: `{image_tags}`.
+            *   Enforce a strict JSON output conforming to the `StyleTransferPlan` schema. A single stage looks like this: `{{"stage_name": "...", "generated_image_tag": "...", "required_image_tags": ["..."], "text_prompt": "...", "gen_temperature": }}`.
+            *   Ensure text_prompt is Command-like prompt, concise and clear.
+            *   Ensure each `required_image_tags` list <= 2.
+            *   Ensure <= {limited_plan_num} stages.
+
+        For each agent, define:
+        - `agent_name`: Unique name.
+        - `dependencies`: List of agent names it depends on.
+        - `prompt`: A **concise** prompt instructing the agent to output JSON. To use a dependency's output, include the placeholder `{{dependency_name}}_output`. 
+        - `required_image_tags`: List of image tags needed. No need to include images for planner.
+        
+        (CRITICAL) The total number of agents in the graph (excluding the planner) MUST be less than or equal to {limited_analysis_agents}.
+        
+        After designing the graph, also create a detailed, customized `result_critique_criteria` for critiquing the task result. Emphasize and come up the key criterias to judge the result is satisfied.
+     
+        # Input
+        User's request: {user_prompt}
+        Available image tags (in order of appearance): {image_tags}
+    
+    function_agents:
+      model:
+        model_provider: ${MODEL_PROVIDER}
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        # model_provider: ${MODEL_PROVIDER}
+        # model: ${MODEL}
+        # api_key: ${APIYI_KEY}
+        temperature: 0.7
+      agents: 
+      
+    reflect_agent:
+      model:
+        model_provider: ${MODEL_PROVIDER}
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        temperature: 1.0
+      # This prompt will be dynamically generated by the orchestrator_agent
+      prompt: |
+        {AI_FILLED_CRITIQUE_CRITERIA_AND_SCORES}
+        Provide a critique, scores_dict, and `is_satisfied` flag.
+
+    stage_agent:
+      model:
+        model_provider: ${MODEL_PROVIDER}
+        model: ${MODEL}
+        api_key: ${APIYI_KEY}
+        base_url: ${BASE_URL}
+        temperature: 1.0
+      prompt: |
+        You are a stage finetuner. Based on a critique, create a *single* new stage to improve the generated image.
+        Address the flaws mentioned. Create a concise, command-like `text_prompt` and specify the `required_image_tags` with the **Most suitable** image tags from the `{image_tags}`(may well <=2).

@@ -1,0 +1,43 @@
+# AgenticST -- core runtime.
+#
+# This is everything needed to run AgenticST and the local API baselines through
+# the APIYI OpenAI-compatible endpoint. It deliberately does NOT include torch,
+# diffusers, or any vendor SDK: after the APIYI refactor, no model traffic goes
+# through Google/Aliyun/Volcengine SDKs, so the pipeline installs and runs on a
+# machine that can only reach api.apiyi.com.
+#
+# Versions are pinned to the set verified working on Python 3.13.
+# For GPU baselines and metric computation, see requirements-metrics.txt.
+# For the retired vendor-SDK code paths, see requirements-legacy.txt.
+
+# --- API access -------------------------------------------------------------
+openai==2.29.0
+python-dotenv==1.1.0
+requests==2.32.5
+
+# --- agent graph ------------------------------------------------------------
+# langchain-classic supplies langchain.chat_models on langchain>=1.0;
+# langchain-openai is the provider used by init_chat_model(model_provider="openai").
+langchain==1.2.13
+langchain-core==1.2.21
+langchain-classic==1.0.3
+langchain-openai==1.1.12
+langchain-community==0.4.1
+langgraph==1.1.3
+pydantic==2.11.7
+
+# --- data / io --------------------------------------------------------------
+pillow==12.0.0
+numpy==2.3.3
+PyYAML==6.0.3
+json-repair>=0.30
+tiktoken==0.11.0
+
+# opencv is used only by src/utils/image_processing.py (Canny edge extraction for
+# the structure-anchoring stage). headless build: no GUI libs needed on a server.
+opencv-python-headless>=4.10
+
+# --- optional ---------------------------------------------------------------
+# cairosvg is guarded by try/except in src/utils/multi_modal_utils.py; install it
+# only if you need SVG rasterisation. It pulls in native cairo libraries.
+# cairosvg>=2.7

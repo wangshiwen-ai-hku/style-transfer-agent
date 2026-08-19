@@ -1,0 +1,19 @@
+# Typical-case evaluation set for the TVCG revision: 2 contents x 4 styles = 8 pairs.
+#
+# pair_id matches the output filename convention used by run_agent_batch.py
+# (sty_<style_stem>_cnt_<content_stem>), so every method's outputs align by filename.
+# EVERY method must write its result as <pair_id>.png into its own output directory.
+#
+# style_attr = the dominant stylistic dimension this pair is meant to stress; used to
+# group results in the qualitative figure and in the intent-conditioned analysis.
+# note = why the pair is in the set. C23xS114 and C23xS112 are the cases raised in review.
+#
+# pair_id,content,style,style_attr,note
+sty_9_cnt_22,compare/content/22.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry on a frontal portrait
+sty_14_cnt_22,compare/content/22.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_112_cnt_22,compare/content/22.jpg,compare/style/112.jpg,proportion_lineart,flat cartoon line art with chibi proportions
+sty_114_cnt_22,compare/content/22.jpg,compare/style/114.jpg,ink_wash_negative_space,Chinese ink wash; deliberate blankness
+sty_9_cnt_23,compare/content/23.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry on a complex outdoor portrait
+sty_14_cnt_23,compare/content/23.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night on a complex outdoor portrait
+sty_112_cnt_23,compare/content/23.jpg,compare/style/112.jpg,proportion_lineart,REVIEW CASE: chibi re-proportioning flagged by R1/R3
+sty_114_cnt_23,compare/content/23.jpg,compare/style/114.jpg,ink_wash_negative_space,REVIEW CASE: teaser (a) closed-eye result flagged by R1/R3

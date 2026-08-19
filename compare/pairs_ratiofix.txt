@@ -1,0 +1,15 @@
+# Subset re-run after the aspect-ratio fix (src/utils/apiyi.py:_framing_index).
+#
+# Only these four pairs are regenerated. The other four have a style reference
+# whose shape is close to the content image (112: 0.77 vs 0.72-0.78; 114: 0.67 vs
+# 0.72-0.78), and within each of those pairs all five methods share the same
+# output shape, so the A/B comparison there is handicapped equally and remains
+# valid. These four are regenerated because sty_9's landscape reference reframes
+# a portrait completely, and because sty_14 is the only style behind the impasto
+# limitation in Sec. 5 -- a claim that cannot rest on a contaminated pair.
+#
+# pair_id,content,style,style_attr,note
+sty_9_cnt_22,compare/content/22.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry on a frontal portrait
+sty_14_cnt_22,compare/content/22.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night; impasto brushwork and night palette
+sty_9_cnt_23,compare/content/23.jpg,compare/style/9.jpg,geometric_form,Kandinsky abstract geometry on a complex outdoor portrait
+sty_14_cnt_23,compare/content/23.jpg,compare/style/14.jpg,mood_lighting_brushwork,Van Gogh Starry Night on a complex outdoor portrait

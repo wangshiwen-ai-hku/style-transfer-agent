@@ -1,0 +1,33 @@
+# Metric computation + GPU baselines. Server only.
+#
+# Install on top of requirements.txt, inside the same environment, AFTER installing
+# a torch build that matches the server's CUDA version -- do not let pip resolve
+# torch for you here, or you will silently get a CPU wheel. Check first:
+#     python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
+#
+# Every metric reported in the paper must be computed on ONE machine with ONE
+# version of these packages. FID in particular is sensitive to the resize and
+# interpolation path, so mixing environments produces differences that look like
+# method differences but are not.
+
+# --- style-transfer metrics (Table 1, 5, 6, 7) ------------------------------
+clean-fid>=0.1.35          # FID / ArtFID
+lpips>=0.1.4               # LPIPS
+transformers>=4.44         # CLIP-I, CSD backbone
+timm>=1.0
+
+# --- preservation-aware metrics (Table 4) -----------------------------------
+mediapipe>=0.10            # facial landmarks -> LMD, and eye aspect ratio -> EAR-Acc
+insightface>=0.7.3         # ArcFace embedding -> ID-Sim (secondary diagnostic only)
+onnxruntime-gpu>=1.18      # insightface backend; use onnxruntime if no GPU
+scikit-image>=0.24         # edge maps -> E-IoU
+scipy>=1.14                # correlations, bootstrap, Friedman / Wilcoxon
+pandas>=2.2                # results tables -> CSV
+
+# Depth (D-Corr) and subject masks (M-IoU) come from transformers pipelines
+# (Depth-Anything and SAM); no extra package is required beyond transformers.
+
+# --- GPU baselines ----------------------------------------------------------
+diffusers>=0.31            # InstructPix2Pix, SDXL, Flux
+accelerate>=0.34
+safetensors>=0.4
